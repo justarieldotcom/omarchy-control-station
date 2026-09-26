@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Contributing guide
+    url: https://github.com/justarieldotcom/omarchy-control-station/blob/main/CONTRIBUTING.md
+    about: Dev setup, testing, and the design rules PRs need to follow

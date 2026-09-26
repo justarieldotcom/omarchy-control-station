@@ -1,0 +1,6 @@
+*.bak
+*.log
+
+# Local working notes, not plugin content
+CLAUDE.md
+SUBMISSION.md

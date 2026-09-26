@@ -1,0 +1,275 @@
+{
+  "schemaVersion": 1,
+  "id": "justarieldotcom.control-station",
+  "name": "Control Station",
+  "version": "1.0.0",
+  "author": "justarieldotcom",
+  "license": "MIT",
+  "description": "Modular bento dashboard: pick which cards are on it, arrange them, and resize each one. Pick any of those cards to also show it inline in the bar. Also a panel module, so the dashboard can be summoned as its own window: omarchy-shell shell summon justarieldotcom.control-station '{}'",
+  "kinds": [
+    "bar-widget",
+    "panel"
+  ],
+  "activation": "on-demand",
+  "entryPoints": {
+    "barWidget": "BarWidget.qml",
+    "panel": "Panel.qml"
+  },
+  "barWidget": {
+    "displayName": "Control Station",
+    "description": "Bento dashboard with Weather, Market, Calendar, Companies House, System, Reminders, Media, Timer, Inbox, VPN, Containers and Repos. The bar shows whichever cards you tick, in your order.",
+    "category": "Info",
+    "aliases": [
+      "control-station",
+      "dashboard"
+    ],
+    "allowMultiple": false,
+    "defaultSection": "right",
+    "defaults": {
+      "weatherTown": "",
+      "symbols": "AAPL,MSFT,TSLA,NVDA,BTC-USD,ETH-USD",
+      "companiesHouseNumber": "",
+      "calendarIcalUrl": "",
+      "refreshIntervalSec": 300,
+      "showHeaders": true,
+      "zoom": 1.0,
+      "repoPaths": "",
+      "cards": [
+        "weather",
+        "market",
+        "calendar",
+        "companies",
+        "reminders",
+        "system"
+      ],
+      "barItems": [
+        "weather"
+      ],
+      "barSymbols": []
+    },
+    "schema": [
+      {
+        "key": "cards",
+        "type": "multiselect",
+        "label": "Dashboard cards",
+        "defaultValue": [
+          "weather",
+          "market",
+          "calendar",
+          "companies",
+          "reminders",
+          "system"
+        ],
+        "noSelectionText": "No cards",
+        "placeholderText": "Search cards...",
+        "emptyText": "No cards on the dashboard",
+        "description": "Cards on the dashboard, in this order. The DASHBOARD group in the plugin's settings (gear) inside the panel does the same thing, picking cards as chips and reordering them by drag-and-drop. The first six are the sensible default; the rest are opt-in.",
+        "options": [
+          {
+            "value": "weather",
+            "label": "Weather",
+            "description": "Current temperature and condition"
+          },
+          {
+            "value": "market",
+            "label": "Market",
+            "description": "Price and change for the symbols below"
+          },
+          {
+            "value": "calendar",
+            "label": "Calendar",
+            "description": "Next events from the iCal URL"
+          },
+          {
+            "value": "companies",
+            "label": "Companies House",
+            "description": "Next filing deadline"
+          },
+          {
+            "value": "reminders",
+            "label": "Reminders",
+            "description": "How many reminders are waiting"
+          },
+          {
+            "value": "system",
+            "label": "System",
+            "description": "CPU, memory, and temperature"
+          },
+          {
+            "value": "media",
+            "label": "Media",
+            "description": "Now playing, with transport controls"
+          },
+          {
+            "value": "timer",
+            "label": "Timer",
+            "description": "Focus timer and stopwatch"
+          },
+          {
+            "value": "inbox",
+            "label": "Inbox",
+            "description": "Recent notifications and do-not-disturb"
+          },
+          {
+            "value": "vpn",
+            "label": "VPN",
+            "description": "NetworkManager and NordVPN connections"
+          },
+          {
+            "value": "containers",
+            "label": "Containers",
+            "description": "Docker containers and their state"
+          },
+          {
+            "value": "repos",
+            "label": "Repos",
+            "description": "Git working trees and their branch state"
+          }
+        ]
+      },
+      {
+        "key": "barItems",
+        "type": "multiselect",
+        "label": "Bar cards",
+        "defaultValue": [
+          "weather"
+        ],
+        "noSelectionText": "Icon only",
+        "placeholderText": "Search cards...",
+        "emptyText": "No cards on the bar",
+        "description": "Cards to show inline in the bar, in this order. Leave empty for the plain icon. Reorder and pick the bar's section and slot from the plugin's own settings (gear) inside the panel.",
+        "options": [
+          {
+            "value": "weather",
+            "label": "Weather",
+            "description": "Current temperature and condition"
+          },
+          {
+            "value": "market",
+            "label": "Market",
+            "description": "Price and change for the symbols below"
+          },
+          {
+            "value": "calendar",
+            "label": "Calendar",
+            "description": "Next event"
+          },
+          {
+            "value": "companies",
+            "label": "Companies House",
+            "description": "Next filing deadline"
+          },
+          {
+            "value": "reminders",
+            "label": "Reminders",
+            "description": "How many reminders are waiting"
+          },
+          {
+            "value": "system",
+            "label": "System",
+            "description": "CPU, memory, and temperature"
+          },
+          {
+            "value": "media",
+            "label": "Media",
+            "description": "Track title and play state"
+          },
+          {
+            "value": "timer",
+            "label": "Timer",
+            "description": "Focus timer, counting down"
+          },
+          {
+            "value": "inbox",
+            "label": "Inbox",
+            "description": "Notification count and do-not-disturb"
+          },
+          {
+            "value": "vpn",
+            "label": "VPN",
+            "description": "Connection state"
+          },
+          {
+            "value": "containers",
+            "label": "Containers",
+            "description": "How many containers are running"
+          }
+        ]
+      },
+      {
+        "key": "barSymbols",
+        "type": "string",
+        "label": "Bar symbols",
+        "defaultValue": "",
+        "description": "Subset of the market symbols below that reaches the bar, comma-separated, up to 3. Leave empty for the first 2 symbols."
+      },
+      {
+        "key": "weatherTown",
+        "type": "string",
+        "label": "Weather location",
+        "defaultValue": "",
+        "description": "Town name for Open-Meteo geocoding. Leave empty to disable weather card."
+      },
+      {
+        "key": "symbols",
+        "type": "string",
+        "label": "Market symbols",
+        "defaultValue": "AAPL,MSFT,TSLA,NVDA,BTC-USD,ETH-USD",
+        "description": "Comma-separated Yahoo Finance symbols. Display order follows this list exactly (first symbol appears first)."
+      },
+      {
+        "key": "companiesHouseNumber",
+        "type": "string",
+        "label": "Company numbers",
+        "defaultValue": "",
+        "description": "UK Companies House registration numbers, comma-separated for multiple companies (e.g. 00445790,08740764). Leave empty to disable."
+      },
+      {
+        "key": "showHeaders",
+        "type": "boolean",
+        "label": "Show card headers",
+        "defaultValue": true,
+        "description": "Show the card name and checked time in each box header. Off gives bodies the full box height."
+      },
+      {
+        "key": "zoom",
+        "type": "number",
+        "label": "Panel zoom",
+        "defaultValue": 1.0,
+        "min": 0.75,
+        "max": 1.6,
+        "step": 0.05,
+        "description": "Overall panel scale (also adjustable by dragging the corner grip while resizing)."
+      },
+      {
+        "key": "calendarIcalUrl",
+        "type": "string",
+        "label": "iCal URL",
+        "defaultValue": "",
+        "description": "Google Calendar secret iCal link (basic.ics). Leave empty to disable."
+      },
+      {
+        "key": "repoPaths",
+        "type": "string",
+        "label": "Repo paths",
+        "defaultValue": "",
+        "description": "Git working trees for the REPOS card, one path per line or comma-separated. A leading ~ is expanded. Leave empty to hide the card."
+      },
+      {
+        "key": "vpnBackend",
+        "type": "string",
+        "default": "openvpn",
+        "description": "VPN client used by the VPN card: openvpn, nordvpn, openconnect or any nmcli-capable name."
+      },
+      {
+        "key": "refreshIntervalSec",
+        "type": "integer",
+        "label": "Refresh interval (seconds)",
+        "min": 60,
+        "max": 3600,
+        "step": 30,
+        "defaultValue": 300
+      }
+    ]
+  }
+}

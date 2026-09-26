@@ -1,0 +1,55 @@
+name: Bug report
+description: Something doesn't work the way the README says it should
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what you saw instead.
+    validations:
+      required: true
+  - type: dropdown
+    id: card
+    attributes:
+      label: Which card?
+      description: Pick the closest one, or "the panel itself" for layout, drag, resize or zoom.
+      options:
+        - The panel itself (layout, drag, resize, zoom)
+        - The bar chips
+        - Weather
+        - Market
+        - Calendar
+        - Companies House
+        - Reminders
+        - System
+        - Media
+        - Timer
+        - Inbox
+        - VPN
+        - Containers
+        - Repos
+        - Settings editor
+        - Something else
+    validations:
+      required: true
+  - type: textarea
+    id: audit
+    attributes:
+      label: Audit output
+      description: >
+        For anything clipped, cut off or overlapping, paste the output of
+        `omarchy-shell justarieldotcom.control-station audit`. It reports
+        per-card overflow as JSON and saves a lot of guessing.
+      render: json
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: Plugin version (manifest.json), Omarchy version, Hyprland version
+      placeholder: "plugin 1.0.0 · Omarchy 4.x · Hyprland 0.56"
+  - type: textarea
+    id: extra
+    attributes:
+      label: Screenshots or logs
+      description: A screenshot of the card helps a lot for layout bugs.

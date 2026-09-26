@@ -1,0 +1,19 @@
+name: Idea / feature request
+description: Suggest a way to make Control Station better
+labels: [enhancement]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: The idea
+      description: What would you like it to do, and what problem does that solve for you?
+    validations:
+      required: true
+  - type: dropdown
+    id: build
+    attributes:
+      label: Want to build it?
+      options:
+        - "Yes, I'd like to open a PR"
+        - Maybe, with some pointers
+        - No, just suggesting
