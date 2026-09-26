@@ -40,10 +40,12 @@ One rule explains most of the structure: **the panel is the only data owner.**
 `anchorItem` and itself into it, so the bar and the panel share one set of
 fetches and one IPC target. Don't add a second fetcher for the bar.
 
-`RESIZE-PLAN.md` in the repo root is the diagnosis and fix log for the
-drag-to-resize feedback loop. Read it before touching `updateResize`,
-`spanStep`, `computeFlow` or the zoom grip — the obvious fix there is the one
-that caused the bug.
+Take care around `updateResize`, `spanStep`, `computeFlow` and the zoom grip.
+Drag-to-resize used to flicker because the handle was anchored to the thing it
+resized, so every span change moved the handle out from under the cursor and
+the next event pushed the span straight back. Measure a drag in a frame that
+the drag does not move, and keep the span hysteresis — the obvious fix here is
+the one that caused the bug.
 
 ## Adding a card
 
