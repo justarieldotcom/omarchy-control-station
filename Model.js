@@ -142,6 +142,13 @@ function unfoldICalLines(text) {
 
 function parseICalDate(str) {
   var s = String(str || "").replace(/[^0-9T]/g, "")
+  // An all-day event carries a bare date (VALUE=DATE, `20261225`), which is
+  // what Google emits for birthdays, holidays and anything spanning whole
+  // days. Midnight local is the right instant for it: the day is the fact.
+  if (s.length === 8) {
+    return new Date(Number(s.substring(0, 4)), Number(s.substring(4, 6)) - 1,
+                    Number(s.substring(6, 8)))
+  }
   if (s.length < 15) return null
   return new Date(
     Number(s.substring(0, 4)),
@@ -152,15 +159,37 @@ function parseICalDate(str) {
   )
 }
 
+// A content line is `NAME` then optional `;PARAM=VALUE` pairs then `:VALUE`.
+// Matching on `NAME:` alone silently drops `DTSTART;VALUE=DATE:20261225` and
+// `DTSTART;TZID=Europe/London:20261225T093000` -- between them, most of a real
+// Google feed. Returns null when this line is some other property.
+function icalValue(line, name) {
+  var text = String(line || "")
+  if (text.substring(0, name.length) !== name) return null
+  var next = text.charAt(name.length)
+  if (next !== ":" && next !== ";") return null
+  var colon = text.indexOf(":")
+  if (colon < 0) return null
+  return { value: text.substring(colon + 1), params: text.substring(name.length, colon) }
+}
+
+function isAllDayLine(line, name) {
+  var part = icalValue(line, name)
+  if (!part) return false
+  if (part.params.indexOf("VALUE=DATE") >= 0) return true
+  // A feed may leave the parameter off and simply give a bare date.
+  return /^[0-9]{8}$/.test(part.value.trim())
+}
+
 function parseICal(text) {
   var lines = unfoldICalLines(text)
   var events = []
-  var inEvent = false, summary = "", dtstart = null, dtend = null
+  var inEvent = false, summary = "", dtstart = null, dtend = null, allDay = false
 
   for (var i = 0; i < lines.length; i++) {
     var line = lines[i]
     if (line === "BEGIN:VEVENT") {
-      inEvent = true; summary = ""; dtstart = null; dtend = null
+      inEvent = true; summary = ""; dtstart = null; dtend = null; allDay = false
     } else if (line === "END:VEVENT") {
       inEvent = false
       if (summary && dtstart) {
@@ -168,14 +197,23 @@ function parseICal(text) {
           summary: summary,
           dtstart: dtstart,
           dtend: dtend,
-          dtstartStr: formatEventTime(dtstart),
+          allDay: allDay,
+          // An all-day event has no time to show, and the card's time column is
+          // too narrow for a word. Leaving it empty lets the date carry it and
+          // keeps the summaries on one line.
+          dtstartStr: allDay ? "" : formatEventTime(dtstart),
           dateStr: formatEventDate(dtstart)
         })
       }
     } else if (inEvent) {
-      if (line.indexOf("SUMMARY:") === 0) summary = line.substring(8)
-      else if (line.indexOf("DTSTART:") === 0) dtstart = parseICalDate(line.substring(8))
-      else if (line.indexOf("DTEND:") === 0) dtend = parseICalDate(line.substring(6))
+      var summaryPart = icalValue(line, "SUMMARY")
+      var startPart = icalValue(line, "DTSTART")
+      var endPart = icalValue(line, "DTEND")
+      if (summaryPart) summary = summaryPart.value
+      else if (startPart) {
+        dtstart = parseICalDate(startPart.value)
+        allDay = isAllDayLine(line, "DTSTART")
+      } else if (endPart) dtend = parseICalDate(endPart.value)
     }
   }
 
@@ -183,7 +221,12 @@ function parseICal(text) {
   events.sort(function(a, b) { return a.dtstart.getTime() - b.dtstart.getTime() })
   var upcoming = []
   for (var j = 0; j < events.length; j++) {
-    if (events[j].dtstart.getTime() >= now.getTime() - 3600000) {
+    // A timed event stays listed for an hour after it starts; an all-day one
+    // is current until its day is over, which is the whole point of it.
+    var cutoff = events[j].allDay
+      ? events[j].dtstart.getTime() + 86400000
+      : events[j].dtstart.getTime() + 3600000
+    if (cutoff >= now.getTime()) {
       upcoming.push(events[j])
       if (upcoming.length >= 5) break
     }
@@ -204,8 +247,14 @@ function formatEventDate(date) {
   var diffDays = Math.round((eventDay.getTime() - today.getTime()) / 86400000)
   if (diffDays === 0) return "Today"
   if (diffDays === 1) return "Tomorrow"
-  var days = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"]
-  return days[date.getDay()]
+  // A weekday name only locates a date inside the coming week. Beyond that it
+  // is a guess -- "Fri" for a holiday three months out reads as this Friday --
+  // so anything further away states the date instead.
+  if (diffDays > 1 && diffDays < 7) {
+    var days = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"]
+    return days[date.getDay()]
+  }
+  return date.getDate() + " " + MONTH_LABELS[date.getMonth()]
 }
 
 // ============================================================ System Stats
@@ -1371,6 +1420,61 @@ function selfCheck() {
   assert(parseICal("BEGIN:VCALENDAR\nBEGIN:VEVENT\nSUMMARY:Past\nDTSTART:" + icalMoment(-3, 14).stamp
          + "\nEND:VEVENT\nEND:VCALENDAR").events.length === 0, "ical: a started event is not upcoming")
 
+  // Property parameters. A feed that writes `DTSTART;TZID=...` or
+  // `SUMMARY;LANGUAGE=...` is writing ordinary iCal, not an edge case.
+  var tzMoment = icalMoment(2, 11)
+  var tzIcal = "BEGIN:VCALENDAR\nBEGIN:VEVENT\nSUMMARY;LANGUAGE=en-gb:Parametered\n"
+    + "DTSTAMP:" + icalMoment(-9, 9).stamp + "\n"
+    + "DTSTART;TZID=Europe/London:" + tzMoment.stamp.replace("Z", "") + "\nEND:VEVENT\nEND:VCALENDAR"
+  var tzEv = parseICal(tzIcal)
+  assert(tzEv.events.length === 1, "ical: parameters do not hide an event")
+  assert(tzEv.events[0].summary === "Parametered", "ical: SUMMARY with a parameter")
+  assert(tzEv.events[0].dtstart.getHours() === 11, "ical: DTSTART with a TZID keeps its time")
+  assert(tzEv.events[0].allDay === false, "ical: a timed event is not all-day")
+
+  // All-day events (VALUE=DATE), which is how Google writes holidays,
+  // birthdays and anything spanning whole days.
+  function icalDay(daysFromNow) {
+    var when = new Date()
+    when.setDate(when.getDate() + daysFromNow)
+    function two(n) { return (n < 10 ? "0" : "") + n }
+    return when.getFullYear() + two(when.getMonth() + 1) + two(when.getDate())
+  }
+  var allDayIcal = "BEGIN:VCALENDAR\nBEGIN:VEVENT\nSUMMARY:Christmas Day\n"
+    + "DTSTART;VALUE=DATE:" + icalDay(3) + "\nDTEND;VALUE=DATE:" + icalDay(4)
+    + "\nEND:VEVENT\nEND:VCALENDAR"
+  var allDayEv = parseICal(allDayIcal)
+  assert(allDayEv.events.length === 1, "ical: an all-day event is parsed")
+  assert(allDayEv.events[0].allDay === true, "ical: all-day flagged")
+  assert(allDayEv.events[0].dtstartStr === "", "ical: all-day shows no time")
+  assert(allDayEv.events[0].dtstart.getHours() === 0, "ical: all-day starts at midnight")
+
+  // Today's all-day event is current all day. Reading it as a midnight start
+  // dropped it from the card at 01:00 every day.
+  var todayAllDay = parseICal("BEGIN:VCALENDAR\nBEGIN:VEVENT\nSUMMARY:Bank Holiday\n"
+    + "DTSTART;VALUE=DATE:" + icalDay(0) + "\nEND:VEVENT\nEND:VCALENDAR")
+  assert(todayAllDay.events.length === 1, "ical: today's all-day event is still upcoming")
+  assert(todayAllDay.events[0].dateStr === "Today", "ical: today's all-day event says Today")
+
+  // A bare date with no VALUE=DATE parameter is still a date.
+  assert(parseICal("BEGIN:VCALENDAR\nBEGIN:VEVENT\nSUMMARY:Bare\nDTSTART:" + icalDay(2)
+         + "\nEND:VEVENT\nEND:VCALENDAR").events[0].allDay === true, "ical: bare date is all-day")
+
+  assert(icalValue("DTSTAMP:20260101T000000Z", "DTSTART") === null, "icalValue: DTSTAMP is not DTSTART")
+  assert(icalValue("DTSTART:20260101T090000", "DTSTART").value === "20260101T090000",
+         "icalValue: plain property")
+  assert(icalValue("DTSTART;VALUE=DATE:20260101", "DTSTART").params === ";VALUE=DATE",
+         "icalValue: parameters kept")
+
+  var farOff = new Date()
+  farOff.setDate(farOff.getDate() + 90)
+  assert(formatEventDate(farOff) === farOff.getDate() + " " + MONTH_LABELS[farOff.getMonth()],
+         "eventDate: beyond a week states the date")
+  var thisWeek = new Date()
+  thisWeek.setDate(thisWeek.getDate() + 3)
+  assert(["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].indexOf(formatEventDate(thisWeek)) >= 0,
+         "eventDate: inside the week names the day")
+
   var folded = "BEGIN:VCALENDAR\nDESCRIPTION:Long line that\n gets folded\nEND:VCALENDAR"
   var unfolded = unfoldICalLines(folded)
   assert(unfolded.length === 3, "unfold: count")
@@ -1766,6 +1870,8 @@ if (typeof module !== "undefined") {
     formatDateChShort: formatDateChShort,
     unfoldICalLines: unfoldICalLines,
     parseICalDate: parseICalDate,
+    icalValue: icalValue,
+    isAllDayLine: isAllDayLine,
     parseICal: parseICal,
     formatEventTime: formatEventTime,
     formatEventDate: formatEventDate,

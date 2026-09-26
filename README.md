@@ -61,7 +61,7 @@ slots from inside the plugin's own settings; no config file editing.
 |---|---|
 | **Weather** | Current conditions and a 3-day forecast, with type-ahead town search |
 | **Market** | Live quotes and day change for any symbols you list, plus one-tap presets |
-| **Calendar** | Your next events, from a Google Calendar secret iCal link |
+| **Calendar** | Your next events, timed or all-day, from a Google Calendar secret iCal link |
 | **Companies House** | Next UK filing deadline, for one company or several, flagged when it's close |
 | **Reminders** | What Omarchy reminders are still waiting on you |
 | **System** | CPU, memory, disk and temperature |
