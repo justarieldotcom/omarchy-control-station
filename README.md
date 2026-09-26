@@ -16,6 +16,13 @@ things you check constantly never need a click at all.
 [![License: MIT](https://img.shields.io/badge/license-MIT-f5a97f?style=flat-square)](LICENSE)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-c6a0f6?style=flat-square)](CONTRIBUTING.md)
 
+<img src="docs/media/dashboard.png" width="540" alt="The Control Station panel: a nine-card bento grid with weather, system, market, calendar, company filings, a focus timer, reminders, git repos and notifications">
+
+<img src="docs/media/bar-chips.png" width="540" alt="The same plugin inline in the bar: 14 degrees, AAPL 341.07 +1.5%, and tomorrow's 09:30 standup">
+
+<sub>Screenshots show a demo setup. Calendar and reminder entries are made up;
+everything else is live.</sub>
+
 </div>
 
 ## Build the dashboard you actually want
@@ -32,6 +39,10 @@ things you check constantly never need a click at all.
 Every arrangement persists. Close the panel, restart the shell, it comes back
 exactly as you left it.
 
+<img src="docs/media/resize-mode.png" width="460" alt="Resize mode: the header reads RESIZE MODE, drag card corners or panel grip, and every card has a grip in its bottom-right corner">
+
+<sub>Resize mode. Every card grows a corner grip; the grid reflows live as you pull.</sub>
+
 ## Your bar, your way
 
 Tick the cards you want inline in the bar and they render as live chips in your
@@ -39,6 +50,10 @@ chosen order — `18°C ☀ · AAPL +1.2% · 3 reminders` — or leave it empty 
 plain icon. Market chips take a symbol subset of their own, so the bar stays
 short while the panel stays complete. Move the widget between bar sections and
 slots from inside the plugin's own settings; no config file editing.
+
+<img src="docs/media/bar.png" width="900" alt="The full bar, with the Control Station chips sitting between the clock and the system tray">
+
+<sub>The whole bar. The chips sit in whichever section and slot you pick.</sub>
 
 ## The cards
 
@@ -110,8 +125,13 @@ section in `~/.config/omarchy/shell.json`:
 
 ## Configure
 
-Everything is editable from the gear inside the panel, and every setting is also
-a key on that bar entry:
+Everything is editable from the gear inside the panel — the fields up top, then
+the two chip lists that choose what's on the dashboard and what's on the bar,
+then where the widget sits:
+
+<img src="docs/media/settings.png" width="460" alt="The in-panel settings editor: text fields for town, symbols, companies, iCal URL and refresh interval, then chip rows for dashboard cards, available cards, bar face, bar symbols and bar placement">
+
+Every setting is also a key on that bar entry:
 
 | Setting | What it is |
 |---|---|

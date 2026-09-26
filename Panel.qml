@@ -221,7 +221,10 @@ Panel {
   function stampCard(id, at) {
     var stamps = {}
     for (var key in root.cardAt) stamps[key] = root.cardAt[key]
-    stamps[id] = at
+    // The header prints this value as it stands, and every call site passes a
+    // millisecond clock, so the formatting belongs here rather than at each of
+    // them -- a raw `Date.now()` reaches the card as "1790460527794".
+    stamps[id] = (typeof at === "number") ? Model.formatTimeNow() : at
     root.cardAt = stamps
   }
 
