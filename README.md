@@ -68,7 +68,7 @@ slots from inside the plugin's own settings; no config file editing.
 | **Media** | Now playing with real transport controls — play/pause, skip, and cycle between players |
 | **Timer** | Focus timer and stopwatch, with a chime and a desktop notification. A running timer survives a shell restart and resumes where it really is, not where it was |
 | **Inbox** | Recent notifications, urgency-aware, with do-not-disturb and clear-history in the card |
-| **VPN** | NetworkManager and NordVPN connections, toggled up and down in place |
+| **VPN** | NetworkManager VPN connections, toggled up and down in place |
 | **Containers** | Every Docker container and its state, with honest errors — no socket, no permission, or no binary |
 | **Repos** | Your git working trees: branch, ahead/behind, staged vs. dirty at a glance |
 
@@ -108,13 +108,13 @@ Bind it to a key and summon the whole thing without a bar widget at all.
 
 ## Install
 
-Clone into your Omarchy plugins directory, then add the widget to your bar:
-
 ```bash
-git clone https://github.com/justarieldotcom/omarchy-control-station.git \
-  ~/.config/omarchy/plugins/justarieldotcom.control-station
-omarchy restart shell
+omarchy plugin add https://github.com/justarieldotcom/omarchy-control-station.git --enable
 ```
+
+That validates the plugin, installs it as
+`~/.config/omarchy/plugins/justarieldotcom.control-station` and loads it into
+the running shell — no restart.
 
 Then pick **Control Station** from the bar widget picker, or add it to a bar
 section in `~/.config/omarchy/shell.json`:
@@ -122,6 +122,21 @@ section in `~/.config/omarchy/shell.json`:
 ```json
 { "id": "justarieldotcom.control-station" }
 ```
+
+## Update
+
+```bash
+omarchy plugin update justarieldotcom.control-station
+```
+
+## Uninstall
+
+```bash
+omarchy plugin remove justarieldotcom.control-station
+```
+
+That unloads the widget, drops its bar entry from `~/.config/omarchy/shell.json`
+and deletes the plugin folder. Control Station writes nowhere else.
 
 ## Configure
 
@@ -143,7 +158,7 @@ Every setting is also a key on that bar entry:
 | `calendarIcalUrl` | Google Calendar secret iCal link (`basic.ics`) |
 | `companiesHouseNumber` | UK company numbers, comma-separated |
 | `repoPaths` | Git working trees for the Repos card (`~` expanded) |
-| `vpnBackend` | `openvpn`, `nordvpn`, `openconnect` or any nmcli name |
+| `vpnBackend` | `openvpn`, `openconnect` or any nmcli name |
 | `showHeaders` | Card name and checked-at time in each header |
 | `zoom` | Panel scale, 0.75–1.6 |
 | `refreshIntervalSec` | Heartbeat interval, 60–3600 |

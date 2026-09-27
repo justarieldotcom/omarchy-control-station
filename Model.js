@@ -560,8 +560,10 @@ function dockerErrorText(stderr, exitCode) {
 
 // ============================================================ VPN
 
-// Two nmcli passes and a nordvpnd probe, batched into one call by the panel and
-// split on a marker here. `kind` is "openvpn" or "nordvpn"; the toggle differs.
+// nmcli's VPN profiles, emitted by the panel under a backend header. Sections
+// split on an @@VPN@@ marker so a second backend can be appended later without
+// reshaping the emitter; a section whose header is not a known backend is
+// skipped rather than guessed at.
 function parseVpnListings(text) {
   var out = { backends: [], connections: [] }
   var sections = String(text || "").split("@@VPN@@")
@@ -571,7 +573,7 @@ function parseVpnListings(text) {
     while (at < lines.length && String(lines[at]).trim() === "") at++
     if (at >= lines.length) continue
     var kind = String(lines[at]).trim()
-    if (kind !== "openvpn" && kind !== "nordvpn") continue
+    if (kind !== "openvpn") continue
     out.backends.push(kind)
     for (var i = at + 1; i < lines.length; i++) {
       var line = lines[i].trim()
@@ -592,16 +594,7 @@ function parseVpnListings(text) {
       })
     }
   }
-  // NordVPN hides its single connection behind a daemon, so the backend itself
-  // is the row when nmcli knows nothing.
-  if (out.backends.indexOf("nordvpn") !== -1 && !hasKind(out.connections, "nordvpn"))
-    out.connections.push({ kind: "nordvpn", name: "NordVPN", state: "off", active: false, activating: false })
   return out
-}
-
-function hasKind(connections, kind) {
-  for (var i = 0; i < (connections || []).length; i++) if (connections[i] && connections[i].kind === kind) return true
-  return false
 }
 
 // ============================================================ Inbox
@@ -733,7 +726,7 @@ var CARDS = [
   { id: "inbox", title: "INBOX", group: "Now", summary: "Recent notifications, plus do-not-disturb",
     default: false, bar: true, glyph: "\uf01e", needs: [] },
 
-  { id: "vpn", title: "VPN", group: "System", summary: "NetworkManager and NordVPN connections",
+  { id: "vpn", title: "VPN", group: "System", summary: "NetworkManager VPN connections",
     default: false, bar: true, glyph: "\uf132",
     needs: [{ key: "vpnBackend", why: "No VPN backend found" }] },
   { id: "containers", title: "CONTAINERS", group: "System", summary: "Docker containers and their state",
@@ -1709,10 +1702,10 @@ function selfCheck() {
   assert(formatDateChShort(ddmm(20)).indexOf(String(new Date().getFullYear())) === -1, "short date: drops this year's year")
 
   // ---- repos
-  assert(parseRepoPaths("~/Work\n~/Work", "/home/t480").join(",") === "/home/t480/Work",
+  assert(parseRepoPaths("~/Work\n~/Work", "/home/you").join(",") === "/home/you/Work",
          "repos: ~ expanded, repeat dropped")
-  assert(parseRepoPaths(" /a/b/ , /c ,", "/home/t480").join(",") === "/a/b,/c", "repos: csv, trimmed, trailing slash gone")
-  assert(parseRepoPaths("", "/home/t480").length === 0, "repos: empty")
+  assert(parseRepoPaths(" /a/b/ , /c ,", "/home/you").join(",") === "/a/b,/c", "repos: csv, trimmed, trailing slash gone")
+  assert(parseRepoPaths("", "/home/you").length === 0, "repos: empty")
   assert(parseRepoPaths(null, null).length === 0, "repos: null")
   assert(parseRepoPaths("~x", "").length === 0, "repos: ~ with no home drops the path")
 
@@ -1751,7 +1744,7 @@ function selfCheck() {
   assert(dockerErrorText("", 127) === "unavailable (exit 127)", "docker: bare exit code still says something")
 
   // ---- repos as one batch call
-  var batch = parseRepoBatch("@@REPO@@/home/t480/.local/share/hyprflow\n"
+  var batch = parseRepoBatch("@@REPO@@/home/you/.local/share/hyprflow\n"
     + "# branch.head main\n? new.txt\n"
     + "@@REPO@@/tmp\nfatal: not a git repository (or any of the parent directories): .git\n"
     + "@@REPO@@/srv/app\n# branch.head trunk\n1 M. N... 100644 100644 100644 aaa aaa x.c\n")
@@ -1761,15 +1754,19 @@ function selfCheck() {
   assert(batch[2].branch === "trunk" && batch[2].staged === 1, "repos: second repo still parsed")
   assert(parseRepoBatch("").length === 0, "repos: no markers, no rows")
 
-  // ---- vpn (two nmcli passes and the nordvpnd probe, split on a marker)
-  var vpn = parseVpnListings("openvpn\nhomelab-uk|openvpn|activated\noffice|openvpn|\n@@VPN@@\nnordvpn\n")
-  assert(vpn.backends.join(",") === "openvpn,nordvpn", "vpn: backends found")
-  assert(vpn.connections.length === 3, "vpn: two nmcli rows + a synthetic NordVPN row")
+  // ---- vpn (nmcli's profiles under a backend header, sections split on a marker)
+  var vpn = parseVpnListings("openvpn\nhomelab-uk|openvpn|activated\noffice|openvpn|\ndialling|openvpn|activating\n")
+  assert(vpn.backends.join(",") === "openvpn", "vpn: backend found")
+  assert(vpn.connections.length === 3, "vpn: one row per nmcli profile")
   assert(vpn.connections[0].active === true, "vpn: active connection")
   assert(vpn.connections[1].active === false, "vpn: inactive connection")
-  assert(vpn.connections[2].name === "NordVPN" && vpn.connections[2].active === false, "vpn: nordvpn is its own row")
+  assert(vpn.connections[2].active === false && vpn.connections[2].activating === true,
+         "vpn: a dialling connection is activating, not yet active")
   assert(parseVpnListings("").connections.length === 0, "vpn: nothing found")
-  assert(parseVpnListings("nordvpn\n").connections.length === 1, "vpn: nordvpn alone still makes a row")
+  // A section whose header is not a backend we drive is skipped, not guessed at.
+  var vpnUnknown = parseVpnListings("openvpn\nhomelab-uk|openvpn|activated\n@@VPN@@\nnordvpn\n")
+  assert(vpnUnknown.backends.join(",") === "openvpn", "vpn: unknown backend is not a backend")
+  assert(vpnUnknown.connections.length === 1, "vpn: unknown backend adds no rows")
   assert(parseVpnListings("openvpn\nmy\\:net|openvpn|activated\n").connections[0].name === "my:net",
          "vpn: nmcli escapes colons in names")
 
@@ -1854,6 +1851,31 @@ function selfCheck() {
       for (var v = 0; v < value.length; v++)
         assert(!!cardById(String(value[v])), "manifest: default " + d2 + " names a known card")
     }
+    // `schema` drives the settings editor and `defaults` is what the bar starts
+    // from, so a setting that lives in only one of them is invisible in the
+    // other. Every entry must be complete and the two must agree exactly.
+    var schemaKeys = []
+    for (var e = 0; e < schema.length; e++) {
+      var entry = schema[e]
+      var where = "manifest: schema[" + e + "]"
+      assert(typeof entry.key === "string" && entry.key !== "", where + " has a `key`")
+      where = "manifest: schema `" + entry.key + "`"
+      assert(schemaKeys.indexOf(entry.key) === -1, where + " is declared once")
+      schemaKeys.push(entry.key)
+      assert(typeof entry.label === "string" && entry.label !== "", where + " has a `label`")
+      assert(typeof entry.type === "string" && entry.type !== "", where + " has a `type`")
+      assert(entry.defaultValue !== undefined, where + " has a `defaultValue`")
+      // A stray `default` is the shape of the bug this block exists to catch:
+      // it reads right, the editor ignores it, and the setting has no default.
+      assert(entry["default"] === undefined, where + " uses `defaultValue`, not `default`")
+      assert(Object.prototype.hasOwnProperty.call(defaults, entry.key),
+             where + " has a matching `defaults` entry")
+      assert(JSON.stringify(defaults[entry.key]) === JSON.stringify(entry.defaultValue),
+             where + " agrees with `defaults` (" + JSON.stringify(entry.defaultValue)
+             + " vs " + JSON.stringify(defaults[entry.key]) + ")")
+    }
+    for (var dk in defaults)
+      assert(schemaKeys.indexOf(dk) !== -1, "manifest: default `" + dk + "` has a `schema` entry")
   }
 
   console.log("Model.selfCheck: all assertions passed")

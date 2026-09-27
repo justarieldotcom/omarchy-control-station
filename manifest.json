@@ -45,7 +45,8 @@
       "barItems": [
         "weather"
       ],
-      "barSymbols": []
+      "barSymbols": "",
+      "vpnBackend": "openvpn"
     },
     "schema": [
       {
@@ -113,7 +114,7 @@
           {
             "value": "vpn",
             "label": "VPN",
-            "description": "NetworkManager and NordVPN connections"
+            "description": "NetworkManager VPN connections"
           },
           {
             "value": "containers",
@@ -258,8 +259,9 @@
       {
         "key": "vpnBackend",
         "type": "string",
-        "default": "openvpn",
-        "description": "VPN client used by the VPN card: openvpn, nordvpn, openconnect or any nmcli-capable name."
+        "label": "VPN backend",
+        "defaultValue": "openvpn",
+        "description": "VPN client used by the VPN card: openvpn, openconnect or any nmcli-capable name."
       },
       {
         "key": "refreshIntervalSec",

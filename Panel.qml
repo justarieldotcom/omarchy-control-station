@@ -961,27 +961,23 @@ Panel {
   }
 
   // --- vpn
-  // One call, both backends: nmcli for NetworkManager profiles, a systemd probe
-  // for nordvpnd, split on a marker so the parser can tell them apart.
+  // nmcli's VPN profiles, emitted under a backend header. The parser splits on
+  // an @@VPN@@ marker, so a second backend can be appended here without
+  // reshaping either side.
   function startVpn() {
     if (vpnProc.running) return
     var script = "if command -v nmcli >/dev/null 2>&1; then"
       + " printf 'openvpn\\n';"
       + " nmcli -t -f NAME,TYPE,STATE con show"
       + " | sed -n 's/^\\(.*\\)\\:vpn\\:\\(.*\\)$/\\1|openvpn|\\2/p'; fi"
-      + "; if systemctl --user is-active --quiet nordvpnd 2>/dev/null || command -v nordvpn >/dev/null 2>&1; then"
-      + " printf '@@VPN@@\\nnordvpn\\n'; fi"
     vpnProc.command = ["bash", "-lc", script]
     vpnProc.running = true
   }
 
   function toggleVpn(conn) {
     if (!conn || vpnActionProc.running) return
-    var script
-    if (conn.kind === "nordvpn")
-      script = "systemctl --user restart nordvpnd"
-    else
-      script = (conn.active ? "down" : "up") + " id " + Util.shellQuote(conn.name)
+    var script = "nmcli con " + (conn.active ? "down" : "up")
+      + " id " + Util.shellQuote(conn.name)
     vpnActionProc.command = ["bash", "-lc", script]
     vpnActionProc.running = true
     // Bring the list back promptly, then let the poll take over.
@@ -3854,7 +3850,7 @@ Panel {
     readonly property var connections: root.vpnConnections || []
 
     CardEmpty {
-      text: root.vpnBackend === "nordvpn" ? "No NordVPN" : "No VPN profiles"
+      text: "No VPN profiles"
       sub: "Add one in Network settings"
       visible: vpnBody.connections.length === 0
       width: parent.width
@@ -3874,7 +3870,7 @@ Panel {
         CardRow {
           required property var modelData
           readonly property bool up: modelData.active
-          glyph: modelData.kind === "nordvpn" ? "󰒢" : "󰒣"
+          glyph: "󰒣"
           label: modelData.name
           value: modelData.activating ? "…" : (up ? "UP" : "DOWN")
           valueColor: modelData.activating ? root.dim : (up ? root.foreground : Qt.darker(root.dim, 1.1))
