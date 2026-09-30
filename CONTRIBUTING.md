@@ -97,7 +97,10 @@ preferences. PRs that break them won't be merged:
 1. **No API keys, no accounts.** Every source is either open data or something
    already on the user's machine. A card that needs a key doesn't belong here.
 2. **No credentials in shipped source**, and nothing that writes a user's URLs
-   or company numbers anywhere but their own `shell.json`.
+   or company numbers anywhere but their own `shell.json`. The iCal URL is a
+   secret: it never goes into a command line (argv is world-readable through
+   `ps`), a log or an IPC reply. Hand it to the process over stdin, as
+   `startCalendar()` does with `curl -K -`.
 3. **No privilege.** No `sudo`, `pkexec`, systemd units, package installs or
    install scripts. Everything runs as the user, as a child of the shell.
 4. **Quote every interpolation into a shell command** (`Util.shellQuote`). Paths,

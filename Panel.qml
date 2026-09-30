@@ -840,8 +840,8 @@ Panel {
     if (numbers.length === 0) { root.companies = []; return }
     var steps = []
     for (var i = 0; i < numbers.length; i++) {
-      steps.push("printf '@@CH@NEXT@@\\n'; curl -fsS --max-time 8 -A 'Mozilla/5.0' 'http://data.companieshouse.gov.uk/doc/company/"
-        + numbers[i] + ".json'")
+      steps.push("printf '@@CH@NEXT@@\\n'; curl -fsS --max-time 8 -A 'Mozilla/5.0' "
+        + Util.shellQuote("http://data.companieshouse.gov.uk/doc/company/" + numbers[i] + ".json"))
     }
     chProc.command = ["bash", "-lc", steps.join("; ")]
     chProc.running = true
@@ -849,7 +849,13 @@ Panel {
 
   function startCalendar() {
     if (root.calendarUrl.trim() === "") { root.calendar = ({ events: [], checkedAt: "" }); return }
-    calProc.command = ["curl", "-fsS", "--max-time", "10", root.calendarUrl.trim()]
+    if (calProc.running) return
+    // The URL is a secret: it goes to curl over stdin, never into argv.
+    var config = Model.curlConfigUrl(root.calendarUrl)
+    if (config === "") { root.keepOnEmpty("calendar", "", null); return }
+    calProc.secret = config
+    calProc.stdinEnabled = true
+    calProc.command = ["curl", "-fsS", "--max-time", "10", "-K", "-"]
     calProc.running = true
   }
 
@@ -1350,6 +1356,16 @@ Panel {
 
   Process {
     id: calProc
+    property string secret: ""
+    stdinEnabled: true
+    // Write the config line, then close stdin so curl sees EOF and starts.
+    // startCalendar() re-opens stdin before each run: a run that starts with
+    // stdinEnabled still false never gets its EOF and curl waits forever.
+    onStarted: {
+      calProc.write(calProc.secret)
+      calProc.secret = ""
+      calProc.stdinEnabled = false
+    }
     stdout: StdioCollector {
       waitForEnd: true
       onStreamFinished: {
@@ -1694,9 +1710,9 @@ Panel {
           repoPaths: root.repoPaths,
           // A setting that silently reads as "" disables its card with no
           // visible cause, so the inputs the fetchers gate on are reported.
-          inputs: { calendarUrl: root.calendarUrl, symbols: root.settingSymbols,
+          inputs: { calendarUrlSet: root.calendarUrl.trim() !== "", symbols: root.settingSymbols,
                     companies: root.companyNumbers.length, weatherTown: root.weatherTown },
-          fetchers: { calProc: calProc.running, calProcCmd: calProc.command, calProcExit: calProc.exitCode },
+          fetchers: { calProc: calProc.running, calProcExit: calProc.exitCode },
           // The original six, as one number each. A chip or a card that looks
           // empty is otherwise indistinguishable from a fetcher that never ran.
           weather: root.weather && root.weather.temp !== undefined ? root.weather.temp : null,

@@ -127,6 +127,17 @@ function formatDateChShort(dateStr) {
 
 // ============================================================ iCal / Google Calendar
 
+// The secret iCal URL is a credential: in argv it is readable by any local
+// user through ps or /proc/<pid>/cmdline. Panel.qml hands it to `curl -K -`
+// over stdin instead, as this one config line. Anything but a single-line
+// http(s) URL returns "", so a stray newline cannot smuggle in a second curl
+// option (`output = ...`).
+function curlConfigUrl(url) {
+  var u = String(url || "").trim()
+  if (!/^https?:\/\//i.test(u) || /[\r\n\u0000]/.test(u)) return ""
+  return 'url = "' + u.replace(/\\/g, "\\\\").replace(/"/g, '\\"') + '"\n'
+}
+
 function unfoldICalLines(text) {
   var lines = String(text || "").replace(/\r\n/g, "\n").split("\n")
   var result = []
@@ -1402,6 +1413,17 @@ function selfCheck() {
   var meetingEnd = icalMoment(1, 15)
   var ical = "BEGIN:VCALENDAR\nBEGIN:VEVENT\nSUMMARY:Test Meeting\nDTSTART:" + meeting.stamp
     + "\nDTEND:" + meetingEnd.stamp + "\nEND:VEVENT\nEND:VCALENDAR"
+  // ---- curlConfigUrl: the iCal URL goes to curl over stdin, never argv
+  assert(curlConfigUrl(" https://calendar.google.com/calendar/ical/a%40b/private-x/basic.ics ")
+         === 'url = "https://calendar.google.com/calendar/ical/a%40b/private-x/basic.ics"\n',
+         "curlConfigUrl: trims and quotes a plain URL")
+  assert(curlConfigUrl('https://x/a"b\\c') === 'url = "https://x/a\\"b\\\\c"\n',
+         "curlConfigUrl: escapes quotes and backslashes")
+  assert(curlConfigUrl("https://x/a\noutput = /tmp/pwn") === "", "curlConfigUrl: rejects an embedded newline")
+  assert(curlConfigUrl("https://x/a\rb") === "", "curlConfigUrl: rejects an embedded CR")
+  assert(curlConfigUrl("file:///etc/passwd") === "", "curlConfigUrl: rejects a non-http scheme")
+  assert(curlConfigUrl("") === "" && curlConfigUrl(undefined) === "", "curlConfigUrl: empty in, empty out")
+
   var ev = parseICal(ical)
   assert(ev.events.length === 1, "ical: event count")
   assert(ev.events[0].summary === "Test Meeting", "ical: summary")
@@ -1895,6 +1917,7 @@ if (typeof module !== "undefined") {
     icalValue: icalValue,
     isAllDayLine: isAllDayLine,
     parseICal: parseICal,
+    curlConfigUrl: curlConfigUrl,
     formatEventTime: formatEventTime,
     formatEventDate: formatEventDate,
     parseSystemOutput: parseSystemOutput,
